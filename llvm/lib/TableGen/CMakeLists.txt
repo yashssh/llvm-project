@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMTableGen
   DetailedRecordsBackend.cpp
+  DotRecordsBackend.cpp
   Error.cpp
   JSONBackend.cpp
   Main.cpp

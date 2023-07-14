@@ -68,6 +68,8 @@ TableGen::Emitter::Opt X[] = {
      true},
     {"print-detailed-records", EmitDetailedRecords,
      "Print full details of all records to stdout"},
+    {"print-dot-records", EmitDotRecords,
+     "Print full details of all records as dot file"},
     {"null-backend", [](RecordKeeper &Records, raw_ostream &OS) {},
      "Do nothing after parsing (useful for timing)"},
     {"dump-json", EmitJSON, "Dump all records as machine-readable JSON"},

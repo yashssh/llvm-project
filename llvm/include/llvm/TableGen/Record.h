@@ -2307,6 +2307,7 @@ public:
 };
 
 void EmitDetailedRecords(RecordKeeper &RK, raw_ostream &OS);
+void EmitDotRecords(RecordKeeper &RK, raw_ostream &OS);
 void EmitJSON(RecordKeeper &RK, raw_ostream &OS);
 
 } // end namespace llvm

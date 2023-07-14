@@ -3,6 +3,7 @@ static_library("TableGen") {
   deps = [ "//llvm/lib/Support" ]
   sources = [
     "DetailedRecordsBackend.cpp",
+    "DotRecordsBackend.cpp",
     "Error.cpp",
     "JSONBackend.cpp",
     "Main.cpp",
