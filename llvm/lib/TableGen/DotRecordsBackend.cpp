@@ -39,6 +39,9 @@ namespace {
 static cl::opt<std::string>
 FilterClass("filter-class", cl::desc("Class to generate dot graph for"), cl::value_desc("ClassName"), cl::init(""));
 
+static cl::opt<std::string>
+FilterDef("filter-def", cl::desc("Def to generate dot graph for"), cl::value_desc("DefName"), cl::init(""));
+
 using NodeMap = std::unordered_map<std::string, int>;
 // Any helper data structures can be defined here. Some backends use
 // structs to collect information from the records.
@@ -53,7 +56,6 @@ public:
   void printGraphEdges(raw_ostream &OS, Record& RootNode);
   void printNodes(raw_ostream &OS);
   void indexGraphNodes(Record &RootNode);
-  Record& queryRootNode(std::string &RootNodeName);
   void generateDotGraph(raw_ostream &OS, Record &RootNode);
   void run(raw_ostream &OS);
   void printHello(raw_ostream &OS);
@@ -105,8 +107,8 @@ void DotRecordsEmitter::indexGraphNodes(Record &RootNode) {
   // SmallVectorImpl<Record *> Classes;
   Queue.push(&RootNode);
   while(Queue.size()){
-    Record* Class = Queue.front();
-    std::string ClassName = Class->getNameInitAsString();
+    Record* Current = Queue.front();
+    std::string ClassName = Current->getNameInitAsString();
     Queue.pop();
     
     // Skip visited nodes
@@ -117,19 +119,10 @@ void DotRecordsEmitter::indexGraphNodes(Record &RootNode) {
     
     // Push parent nodes into queue
     // FIXME: Use getDirectSuperClasses
-    auto Superclasses = Class->getSuperClasses();
+    auto Superclasses = Current->getSuperClasses();
     for (const auto &SuperClassPair : Superclasses)
       Queue.push(SuperClassPair.first);
     
-  }
-}
-
-Record& DotRecordsEmitter::queryRootNode(std::string& RootNodeName) {
-  const auto &ClassList = Records.getClasses();
-  for(const auto &ClassPair: ClassList){
-    auto *const Class = ClassPair.second.get();
-    if(RootNodeName ==  Class->getNameInitAsString())
-      return *Class;
   }
 }
 
@@ -150,27 +143,28 @@ void DotRecordsEmitter::generateDotGraph(raw_ostream &OS, Record &RootNode) {
 }
 
 void DotRecordsEmitter::run(raw_ostream &OS) {
-  assert(!FilterClass.empty() && "Provide a class name to generate dot graph for. -filter-class=<Name>");
-  Record &RootNode = queryRootNode(FilterClass);
-  OS << "Root Node is " << RootNode.getNameInitAsString() << NL;
-  // printHello(OS);
+  if(FilterClass.empty() && FilterDef.empty()){
+    OS << "Specify either -filter-class or -filter-def" << NL;
+    return;
+  }
+  if(!FilterClass.empty() && !FilterDef.empty()){
+    OS << "Specify only one out of -filter-class and -filter-def" << NL;
+    return;
+  }
+  Record* RootNode;
+  if(!FilterClass.empty())
+    RootNode = Records.getClass(FilterClass);
+  else
+    RootNode = Records.getDef(FilterDef);
+  OS << "Root Node is " << RootNode->getNameInitAsString() << NL;
 
   // FIXME: No need to print file header in .dot graph, will cause parsing error
-  emitSourceFileHeader("Skeleton data structures", OS);
+  // emitSourceFileHeader("Skeleton data structures", OS);
 
-  indexGraphNodes(RootNode);
-  generateDotGraph(OS, RootNode);
+  indexGraphNodes(*RootNode);
+  generateDotGraph(OS, *RootNode);
 
   (void)Records; // To suppress unused variable warning; remove on use.
-}
-
-
-// Print the report heading, including the source file name.
-void DotRecordsEmitter::printHello(raw_ostream &OS) {
-  OS << "Running dot records backend \n";
-  OS << "Backend name is: DotRecordsBackend\n";
-  OS << "Debug string is 'detailed-records-backend'\n";
-  OS << "Invoke using: llvm-tablegen -print-dot-records input.td \n";
 }
 
 namespace llvm {
