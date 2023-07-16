@@ -50,15 +50,15 @@ class DotRecordsEmitter {
 private:
   RecordKeeper &Records;
   NodeMap Nodes;
-public:
-  DotRecordsEmitter(RecordKeeper &RK) : Records(RK) {}
 
   void printGraphEdges(raw_ostream &OS, Record& RootNode);
   void printNodes(raw_ostream &OS);
   void indexGraphNodes(Record &RootNode);
   void generateDotGraph(raw_ostream &OS, Record &RootNode);
+
+public:
+  DotRecordsEmitter(RecordKeeper &RK) : Records(RK) {}
   void run(raw_ostream &OS);
-  void printHello(raw_ostream &OS);
 }; // emitter class
 
 } // anonymous namespace
