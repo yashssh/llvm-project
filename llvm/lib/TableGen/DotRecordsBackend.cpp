@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/GraphWriter.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include "llvm/TableGen/Record.h"
 
@@ -52,6 +53,7 @@ private:
   NodeMap Nodes;
 
   void printGraphEdges(raw_ostream &OS, Record& RootNode);
+  void printNodeLabel(Record* Node, raw_ostream &OS);
   void printNodes(raw_ostream &OS);
   void indexGraphNodes(Record &RootNode);
   void generateDotGraph(raw_ostream &OS, Record &RootNode);
@@ -93,12 +95,30 @@ void DotRecordsEmitter::printGraphEdges(raw_ostream &OS, Record &RootNode) {
   }
 }
 
+void DotRecordsEmitter::printNodeLabel(Record* Node, raw_ostream &OS){
+  std::string NodeName = Node->getNameInitAsString();
+  int NodeIndex = Nodes[Node];
+  if (!Node->isClass()){
+    OS << std::to_string(NodeIndex) +  "[shape=ellipse label=\"" + NodeName + "\" ];\n";
+    return;
+  }
+
+  // TODO: Can use formatv for better string formatting
+  OS << std::to_string(NodeIndex) +  "[shape=record label=\"" + NodeName + " | {Template args | ";
+  ArrayRef<Init *> TemplateArgs = Node->getTemplateArgs();
+  for (const Init *TA : TemplateArgs) {
+    const RecordVal *Value = Node->getValue(TA);
+    // FIXME: Tablegen string escape issue in generated string hence can't use OS << *Value;
+    OS << DOT::EscapeString(Value->getPrintType()) + " " + Value->getNameInitAsString() + "\\n";
+  }
+  OS << "}\" ];\n";
+}
+
 void DotRecordsEmitter::printNodes(raw_ostream &OS) {
   for(auto NodeInfo: Nodes){
     Record* Node = NodeInfo.first;
-    int NodeIndex = NodeInfo.second;
-    std::string Shape = Node->isClass() ? "rectangle" : "ellipse";
-    OS << NodeIndex << "[label=" << Node->getNameInitAsString() << " shape=" << Shape  << " ];" << NL;
+    printNodeLabel(Node, OS);
+    OS << NL;
   }
 }
 
@@ -153,6 +173,7 @@ void DotRecordsEmitter::run(raw_ostream &OS) {
     return;
   }
   Record* RootNode;
+  // FIXME: Add asserts for invalid Class or Def name
   if(!FilterClass.empty())
     RootNode = Records.getClass(FilterClass);
   else
