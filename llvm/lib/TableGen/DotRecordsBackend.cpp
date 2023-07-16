@@ -42,7 +42,7 @@ FilterClass("filter-class", cl::desc("Class to generate dot graph for"), cl::val
 static cl::opt<std::string>
 FilterDef("filter-def", cl::desc("Def to generate dot graph for"), cl::value_desc("DefName"), cl::init(""));
 
-using NodeMap = std::unordered_map<std::string, int>;
+using NodeMap = std::unordered_map<Record*, int>;
 // Any helper data structures can be defined here. Some backends use
 // structs to collect information from the records.
 
@@ -66,10 +66,10 @@ public:
 static void printEdge(Record& ChildNode, Record& ParentNode, NodeMap& Nodes, raw_ostream &OS) {
     std::string ChildLabel = ChildNode.getNameInitAsString();
     std::string ParentLabel = ParentNode.getNameInitAsString();
-    int ChildIndex = Nodes[ChildLabel];
-    int ParentIndex = Nodes[ParentLabel];
-    assert(Nodes.find(ChildLabel) != Nodes.end() && "Child node not indexed");
-    assert(Nodes.find(ParentLabel) != Nodes.end() && "Parent node not indexed");
+    int ChildIndex = Nodes[&ChildNode];
+    int ParentIndex = Nodes[&ParentNode];
+    assert(Nodes.find(&ChildNode) != Nodes.end() && "Child node not indexed");
+    assert(Nodes.find(&ParentNode) != Nodes.end() && "Parent node not indexed");
     OS << "\"" << ChildIndex << "\" -> \"" << ParentIndex << "\";" << NL;
 }
 
@@ -95,9 +95,10 @@ void DotRecordsEmitter::printGraphEdges(raw_ostream &OS, Record &RootNode) {
 
 void DotRecordsEmitter::printNodes(raw_ostream &OS) {
   for(auto NodeInfo: Nodes){
-    std::string NodeLabel = NodeInfo.first;
+    Record* Node = NodeInfo.first;
     int NodeIndex = NodeInfo.second;
-    OS << NodeIndex << "[label = \"" << NodeLabel << "\"];" << NL;
+    std::string Shape = Node->isClass() ? "rectangle" : "ellipse";
+    OS << NodeIndex << "[label=" << Node->getNameInitAsString() << " shape=" << Shape  << " ];" << NL;
   }
 }
 
@@ -112,10 +113,10 @@ void DotRecordsEmitter::indexGraphNodes(Record &RootNode) {
     Queue.pop();
     
     // Skip visited nodes
-    if(Nodes.find(ClassName) != Nodes.end())
+    if(Nodes.find(Current) != Nodes.end())
       continue;
 
-    Nodes[ClassName] = index++;
+    Nodes[Current] = index++;
     
     // Push parent nodes into queue
     // FIXME: Use getDirectSuperClasses
