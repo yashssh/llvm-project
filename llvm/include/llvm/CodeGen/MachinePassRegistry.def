@@ -107,7 +107,7 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #define MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
 // MACHINE_FUNCTION_PASS("mir-printer", PrintMIRPass, ())
-// MACHINE_FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass, ())
+MACHINE_FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass, ())
 #undef MACHINE_FUNCTION_PASS
 
 // After a pass is converted to new pass manager, its entry should be moved from

@@ -460,6 +460,13 @@ public:
                                    inconvertibleErrorCode());
   }
 
+  // FIXME: Write proper declaration for this function
+  virtual Error parseMIRPipeline(MachineFunctionPassManager &MFPM, 
+                                      StringRef PipelineText){
+    return make_error<StringError>("parseMIRPipeline is not overrriden", 
+                                  inconvertibleErrorCode());
+  }
+
   virtual std::pair<StringRef, bool> getPassNameFromLegacyName(StringRef) {
     llvm_unreachable(
         "getPassNameFromLegacyName parseMIRPipeline is not overridden");
