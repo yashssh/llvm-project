@@ -187,8 +187,8 @@ int llvm::compileModuleWithNewPM(
       }
 
       MachineFunctionPassManager MFPM;
-      ExitOnErr(LLVMTM.parseMIRPipeline(MFPM, llvm::join(RunPassNames, ","),
-                                        Opt, MFAM, &PIC));
+      // ExitOnErr(PB.parseMIRPipeline(MFPM, llvm::join(RunPassNames, ","),
+      //                                   Opt, MFAM, &PIC));
       MFPM.addPass(PrintMIRPass(*OS));
       MFPM.addPass(FreeMachineFunctionPass());
 
