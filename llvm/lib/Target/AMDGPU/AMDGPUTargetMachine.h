@@ -65,6 +65,25 @@ public:
   getPredicatedAddrSpace(const Value *V) const override;
 
   unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const override;
+
+  Error buildCodeGenPipeline(ModulePassManager &,
+                                     MachineFunctionPassManager &,
+                                     MachineFunctionAnalysisManager &,
+                                     raw_pwrite_stream &, raw_pwrite_stream *,
+                                     CodeGenFileType, CGPassBuilderOption,
+                                     PassInstrumentationCallbacks *) override;
+
+  void registerModuleAnalyses(ModuleAnalysisManager &);
+  void registerFunctionAnalyses(FunctionAnalysisManager &);
+  bool parseModulePass(StringRef, ModulePassManager &);
+  bool parseFunctionPass(StringRef, FunctionPassManager &);
+  // bool parseLoopPass(StringRef, LoopPassManager &);
+
+  // std::pair<StringRef, bool> getPassNameFromLegacyName(StringRef) override;
+
+  // Error parseMIRPipeline(MachineFunctionPassManager &MFPM, 
+  //                                     StringRef PipelineText) override;
+
 };
 
 //===----------------------------------------------------------------------===//

@@ -469,7 +469,7 @@ public:
 
   virtual std::pair<StringRef, bool> getPassNameFromLegacyName(StringRef) {
     llvm_unreachable(
-        "getPassNameFromLegacyName parseMIRPipeline is not overridden");
+        "getPassNameFromLegacyName is not overridden");
   }
 
   /// Add passes to the specified pass manager to get machine code emitted with

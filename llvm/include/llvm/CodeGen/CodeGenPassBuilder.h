@@ -34,6 +34,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
@@ -45,9 +46,13 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
+#include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/MergeICmps.h"
+#include "llvm/Transforms/Scalar/NaryReassociate.h"
 #include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
 #include "llvm/Transforms/Scalar/ScalarizeMaskedMemIntrin.h"
+#include "llvm/Transforms/Scalar/SeparateConstOffsetFromGEP.h"
+#include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
 #include <cassert>
@@ -177,8 +182,10 @@ protected:
     std::enable_if_t<is_detected<is_module_pass_t, PassT>::value &&
                      !is_detected<is_function_pass_t, PassT>::value>
     operator()(PassT &&Pass) {
-      assert((!AddingFunctionPasses || !*AddingFunctionPasses) &&
-             "could not add module pass after adding function pass");
+      // FIXME: Change the implementation to allow module passes to be added anywhere
+      // in the pipleine, see the explanation in the comment below.
+      // assert((!AddingFunctionPasses || !*AddingFunctionPasses) &&
+      //        "could not add module pass after adding function pass");
       MPM.addPass(std::forward<PassT>(Pass));
     }
 
@@ -392,6 +399,11 @@ protected:
   /// Add common target configurable passes that perform LLVM IR to IR
   /// transforms following machine independent optimization.
   void addIRPasses(AddIRPass &) const;
+
+  /// TODO: Add description
+  void addStraightLineScalarOptimizationPasses(AddIRPass &) const;
+
+  void addEarlyCSEOrGVNPass(AddIRPass &) const;
 
   /// Add pass to prepare the LLVM IR for code generation. This should be done
   /// before exception handling preparation passes.
@@ -654,6 +666,31 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableSelectOptimize)
     addPass(SelectOptimizePass());
+}
+
+template <typename Derived>
+void CodeGenPassBuilder<Derived>::addEarlyCSEOrGVNPass(AddIRPass &addPass) const {
+  if (getOptLevel() == CodeGenOptLevel::Aggressive)
+    addPass(GVNPass());
+  else
+    addPass(EarlyCSEPass());
+}
+
+template <typename Derived>
+void CodeGenPassBuilder<Derived>::addStraightLineScalarOptimizationPasses(AddIRPass &addPass) const {
+  addPass(SeparateConstOffsetFromGEPPass());
+  // ReassociateGEPs exposes more opportunities for SLSR. See
+  // the example in reassociate-geps-and-slsr.ll.
+  addPass(StraightLineStrengthReducePass());
+  // SeparateConstOffsetFromGEP and SLSR creates common expressions which GVN or
+  // EarlyCSE can reuse.
+  // FIXME: Port this
+  addEarlyCSEOrGVNPass(addPass);
+  // Run NaryReassociate after EarlyCSE/GVN to be more effective.
+  addPass(NaryReassociatePass());
+  // NaryReassociate on GEPs creates redundant common expressions, so run
+  // EarlyCSE after it.
+  addPass(EarlyCSEPass());
 }
 
 /// Turn exception handling constructs into something the code generators can
